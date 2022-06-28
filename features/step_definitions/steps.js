@@ -1,59 +1,107 @@
-const { Given, When, Then, Before } = require('@cucumber/cucumber')
-const { assertThat, contains, not, is } = require('hamjest')
-const assert = require('assert')
-const { Person, Network } = require('../../src/shouty')
+const { Given, When, Then, Before } = require("@cucumber/cucumber")
+const { assertThat, contains, is, not, containsInAnyOrder } = require("hamjest")
+const assert = require("assert")
 
-const default_range=100
+const { Person, Network } = require("../../src/shouty")
+
+const default_range = 100
+
 Before(function () {
-    this.people = {}
-    this.network=new Network(default_range)
+  this.people = {}
+  this.messagesShoutedBy = {}
+  this.network = new Network(default_range)
 })
 
-Given('the range is {int}', function (range) {
+Given("the range is {int}", function (range) {
   this.network = new Network(range)
 })
 
-Given('people are located at', function (dataTable) {
-    dataTable.hashes().map((person)=>this.people[person.name]=new Person(this.network,person.location))  
-})
-Given('a person named {word}', function (name) {
+Given("a person named {word}", function (name) {
   this.people[name] = new Person(this.network, 0)
 })
-Given('a person named {word} is located at {int}', function (name, location) {
-  this.people[name] = new Person(this.network, location)
+
+Given("people are located at", function (dataTable) {
+  dataTable
+    .transpose()
+    .hashes()
+    .map((person) => {
+      this.people[person.name] = new Person(this.network, person.location)
+    })
 })
 
-When('Sean shouts', function () {
-  this.people['Sean'].shout("Hello, world")  
-})
-When('Sean shouts the message', function (message) {
-    this.people['Sean'].shout(message)
-  this.messageFromSean = message
-  });
-When('Sean shouts the messages:', function (dataTable) {        
-    dataTable.raw().map(message => {        
-        this.people['Sean'].shout(message[0])          
-    });    
-})
-When('Sean shouts {string}', function (message) {
-  this.people['Sean'].shout(message)
-  this.messageFromSean = message
+Given("Sean has bought {int} credits", function (credits) {
+  this.people["Sean"].credits = credits
 })
 
-Then('Lucy should hear the messages:', function (expectedMessages) { 
-    let actualMessages = this.people['Lucy'].messagesHeard().map((message) => [message])        
-  assert.deepEqual(actualMessages,expectedMessages.raw())
-})
-Then('Lucy should hear a shout', function () {
-  assertThat(this.people['Lucy'].messagesHeard().length, is(1))
-})
-Then('Lucy should hear Sean\'s message', function () {
-  assertThat(this.people['Lucy'].messagesHeard(), contains(this.messageFromSean))
+When("Sean shouts", function () {
+  this.people["Sean"].shout("Hello, world")
 })
 
-Then('{word} should not hear a shout', function (name) {
+When("Sean shouts {string}", function (message) {
+  this.people["Sean"].shout(message)
+  if (!this.messagesShoutedBy["Sean"]) this.messagesShoutedBy["Sean"] = []
+  this.messagesShoutedBy["Sean"].push(message)
+})
+
+When("Sean shouts the following message", function (message) {
+  this.people["Sean"].shout(message)
+  if (!this.messagesShoutedBy["Sean"]) this.messagesShoutedBy["Sean"] = []
+  this.messagesShoutedBy["Sean"].push(message)
+})
+
+When('Sean shouts {int} message(s) containing the word {string}', function (count, word) {
+for (let i = 0; i < count; i++) {
+    let message= "A message containing the word "+word
+    this.people["Sean"].shout(message)
+  if (!this.messagesShoutedBy["Sean"]) this.messagesShoutedBy["Sean"] = []
+  this.messagesShoutedBy["Sean"].push(message)
+}
+});
+
+When('Sean shouts {int} over-long message(s)', function (count) {
+for (let i = 0; i < count; i++) {        
+    let message="x".repeat(181)
+    this.people["Sean"].shout(message)
+  if (!this.messagesShoutedBy["Sean"]) this.messagesShoutedBy["Sean"] = []
+  this.messagesShoutedBy["Sean"].push(message)
+}
+});
+Then("Lucy should hear Sean's message", function () {
+  assertThat(this.messagesShoutedBy["Sean"].length, is(1))
+  const message = this.messagesShoutedBy["Sean"][0]
+  assertThat(this.people["Lucy"].messagesHeard(), contains(message))
+})
+
+
+Then("Lucy should hear a shout", function () {
+  assertThat(this.people["Lucy"].messagesHeard().length, is(1))
+})
+
+Then("Larry should not hear Sean's message", function () {
+  assertThat(this.messagesShoutedBy["Sean"].length, is(1))
+  const message = this.messagesShoutedBy["Sean"][0]
+  assertThat(this.people["Larry"].messagesHeard(), not(contains(message)))
+})
+
+Then("{word} should not hear a shout", function (name) {
   assertThat(this.people[name].messagesHeard().length, is(0))
 })
-Then('Larry should not hear Sean\'s message', function () {
-  assertThat(this.people['Larry'].messagesHeard(), not(contains(this.messageFromSean)))
+
+Then("Lucy hears the following messages:", function (expectedMessages) {
+  let actualMessages = this.people["Lucy"]
+    .messagesHeard()
+    .map((message) => [message])
+
+  assert.deepEqual(actualMessages, expectedMessages.raw())
+})
+
+Then("Lucy hears all Sean's messages", function () {
+  assert.deepEqual(
+    this.people["Lucy"].messagesHeard(),
+    this.messagesShoutedBy["Sean"]
+  )
+})
+
+Then("Sean should have {int} credits", function (expectedCredits) {
+  assertThat(this.people["Sean"].credits, is(expectedCredits))
 })

@@ -1,61 +1,62 @@
-const assert = require('assert')
-const sinon = require('sinon')
-const {Person, Network} = require('../src/shouty')
+const assert = require("assert")
+const sinon = require("sinon")
+const { Person, Network } = require("../src/shouty")
 
-describe('Person', () => {
+describe("Network", function () {
+  const range = 100
+  const network = new Network(range)
+  const message = "Free bagels!"
+  const longMessage = "x".repeat(181)
 
-  let network, message
-  beforeEach(() => {
-    const range   = 100
-    network = new Network(range)
-    message = "Free bagels!"
-  })
-
-  it('broadcasts a message to a listener within range', function () {
+  it("broadcasts a message to a listener within range", function () {
     const shouterLocation = 0
     const listenerLocation = 90
+    const sean = new Person(network, shouterLocation)
     const lucy = new Person(network, listenerLocation)
     const lucyStub = sinon.spy(lucy)
 
-    console.log(message)    
     network.subscribe(lucy)
-    network.broadcast(message, shouterLocation)
-    assert.strictEqual(lucyStub.hear.getCall(0).args[0], message);
+    network.broadcast(message, sean)
+
+    assert.strictEqual(lucyStub.hear.getCall(0).args[0], message)
   })
 
-  it('does not broadcast a message to a listener out of range', function () {
+  it("does not broadcast a message to a listener out of range", function () {
     const shouterLocation = 0
     const listenerLocation = 150
+    const sean = new Person(network, shouterLocation)
     const lucy = new Person(network, listenerLocation)
     const lucyStub = sinon.spy(lucy)
 
     network.subscribe(lucy)
-    network.broadcast(this.message, shouterLocation)
+    network.broadcast(message, sean)
 
     assert(lucyStub.hear.notCalled)
   })
 
-  it('does not broadcast a message to a listener out of range negative distance', function () {
+  it("does not broadcast a message to a listener out of range negative distance", function () {
     const shouterLocation = 0
     const listenerLocation = -150
+    const sean = new Person(network, shouterLocation)
     const lucy = new Person(network, listenerLocation)
     const lucyStub = sinon.spy(lucy)
 
     network.subscribe(lucy)
-    network.broadcast(this.message, shouterLocation)
+    network.broadcast(message, sean)
 
     assert(lucyStub.hear.notCalled)
   })
-  it('does not broadcast a message over 180 characters even if listener is in range', function () {
+
+  it("does not broadcast a message over 180 characters even if listener is in range", function () {
     const shouterLocation = 0
     const listenerLocation = 90
+    const sean = new Person(network, shouterLocation)
     const lucy = new Person(network, listenerLocation)
     const lucyStub = sinon.spy(lucy)
-    const longMessage='x'.repeat(181)
+
     network.subscribe(lucy)
-    network.broadcast(longMessage, shouterLocation)
+    network.broadcast(longMessage, sean)
 
     assert(lucyStub.hear.notCalled)
   })
-
 })
